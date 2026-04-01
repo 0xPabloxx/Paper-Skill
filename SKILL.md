@@ -1,11 +1,11 @@
 ---
 name: read-paper
-description: Read and analyze arXiv papers. Given an arXiv link or ID, download the paper, generate structured reading notes in both Chinese and English, and push to GitHub. (user)
+description: Read and analyze arXiv papers. Given an arXiv link or ID, download the paper, generate structured reading notes in both Chinese and English with figures, and push to GitHub. (user)
 ---
 
 # Read Paper Skill
 
-Read arXiv papers and generate structured reading notes, then push to GitHub.
+Read arXiv papers and generate structured reading notes with figures, then push to GitHub.
 
 ## Trigger
 
@@ -41,44 +41,78 @@ Extract from the XML response:
 - `<author>` - Authors
 - `<updated>` - Last edited date (format: YYYY-MM-DD from the full timestamp)
 
-### Step 3: Download PDF
+### Step 3: Create Folder and Download PDF
 
-Download the paper PDF for reading:
-```bash
-curl -L -o /tmp/paper_ARXIV_ID.pdf "https://arxiv.org/pdf/ARXIV_ID.pdf"
-```
-
-### Step 4: Read the PDF
-
-Use the Read tool to read the downloaded PDF file at `/tmp/paper_ARXIV_ID.pdf`.
-
-### Step 5: Generate Notes
-
-After reading the full paper, generate TWO separate markdown files using the template below.
-
-### Step 6: Save and Push to GitHub
-
-1. Create a folder in the Paper-Skill repository:
-   - Folder name format: `paper-YYYY-MM-DD-short-title` where:
-     - `YYYY-MM-DD` is the paper's last updated date from arXiv
-     - `short-title` is a URL-safe short version of the title (lowercase, hyphens, max 30 chars)
-   - Example: `paper-2023-02-11-verifiable-fhe`
-
-2. Save two markdown files in this folder:
-   - `notes_zh.md` - Chinese version
-   - `notes_en.md` - English version
-
-3. Git commands to execute:
+1. Create the paper folder:
 ```bash
 cd ~/projects/claude-skill-read-paper
 mkdir -p "paper-YYYY-MM-DD-short-title"
-# Write notes_zh.md and notes_en.md using the Write tool
+```
+
+2. Download the paper PDF directly to the folder:
+```bash
+curl -L -o "paper-YYYY-MM-DD-short-title/paper.pdf" "https://arxiv.org/pdf/ARXIV_ID.pdf"
+```
+
+### Step 4: Extract Figures from PDF
+
+Extract images/figures from the PDF for use in notes:
+```bash
+cd "paper-YYYY-MM-DD-short-title"
+
+# Create figures directory
+mkdir -p figures
+
+# Method 1: Extract embedded images (requires poppler-utils)
+pdfimages -png ../paper.pdf figures/fig
+
+# Method 2: If pdfimages not available, convert pages to images
+# pdftoppm -png -r 150 paper.pdf figures/page
+```
+
+If `pdfimages` is not installed, inform the user:
+```bash
+# Install on Ubuntu/Debian:
+sudo apt install poppler-utils
+
+# Install on macOS:
+brew install poppler
+```
+
+### Step 5: Read the PDF
+
+Use the Read tool to read the PDF file. When reading:
+1. Pay attention to all figures and their captions
+2. Note which figures are most important for understanding the paper
+3. Identify figure numbers (Fig. 1, Figure 2, etc.) and their content
+
+### Step 6: Generate Notes with Figures
+
+After reading the paper, generate TWO separate markdown files.
+
+**IMPORTANT**: Include relevant figures in the notes to enhance understanding:
+- Reference figures using relative paths: `![Figure X](figures/fig-XXX.png)`
+- Add figures where they help explain concepts (architecture diagrams, result tables, ablation charts)
+- Include figure captions in the notes
+
+### Step 7: Save Files
+
+Save the following files in the paper folder:
+- `paper.pdf` - Original paper (already downloaded in Step 3)
+- `notes_zh.md` - Chinese notes with figure references
+- `notes_en.md` - English notes with figure references
+- `figures/` - Directory containing extracted figures
+
+### Step 8: Push to GitHub
+
+```bash
+cd ~/projects/claude-skill-read-paper
 git add .
 git commit -m "Add notes: Paper Title (arXiv:XXXX.XXXXX)"
 git push
 ```
 
-4. Return the GitHub folder URL to the user.
+Return the GitHub folder URL to the user.
 
 ---
 
@@ -110,12 +144,18 @@ Each markdown file should follow this structure:
 
 [What is the core insight or key idea that solves the challenge? One sentence high-level thought, NOT specific technical contribution.]
 
+![Overview Figure](figures/fig-XXX.png)
+*Figure X: Brief description of the main architecture or approach*
+
 # Contribution
 
 [List each technical contribution with:]
 1. **[Contribution Name]**
    - **Approach**: [How is it done?]
    - **Technical Advantage**: [Why is this better?]
+
+![Method Figure](figures/fig-XXX.png)
+*Figure X: Diagram showing the method*
 
 2. **[Contribution Name]**
    - **Approach**: [How is it done?]
@@ -126,6 +166,9 @@ Each markdown file should follow this structure:
 ## Core Contribution Impact (Ablation Studies)
 [What is the impact of each core contribution on performance?]
 
+![Results Figure](figures/fig-XXX.png)
+*Figure/Table X: Key experimental results*
+
 ## Limitation
 [What are the failure cases? On what kind of data does it fail?]
 ```
@@ -135,34 +178,41 @@ Each markdown file should follow this structure:
 ## Output Requirements
 
 1. **Two Separate Files**: Generate `notes_zh.md` (Chinese) and `notes_en.md` (English)
-2. **Depth**: Be specific and technical, not generic summaries
-3. **Insight vs Contribution**: Clearly distinguish high-level insight from concrete technical contributions
-4. **Ablation Focus**: When discussing experiments, prioritize ablation studies that show the impact of each contribution
+2. **Include Figures**: Add relevant figures from the paper to improve readability
+3. **PDF Included**: Save original paper as `paper.pdf` in the folder
+4. **Depth**: Be specific and technical, not generic summaries
+5. **Insight vs Contribution**: Clearly distinguish high-level insight from concrete technical contributions
+6. **Ablation Focus**: When discussing experiments, prioritize ablation studies
 
-## File Naming Convention
-
-- Folder: `paper-{updated_date}-{short_title}`
-  - `updated_date`: From arXiv `<updated>` field, format `YYYY-MM-DD`
-  - `short_title`: Lowercase, spaces replaced with hyphens, max 30 characters, URL-safe
-- Files:
-  - `notes_zh.md` - Chinese notes
-  - `notes_en.md` - English notes
-
-## Example
+## Folder Structure
 
 For paper `2301.07041` (Verifiable Fully Homomorphic Encryption, updated 2023-02-11):
 
 ```
 ~/projects/claude-skill-read-paper/
 ├── paper-2023-02-11-verifiable-fhe/
-│   ├── notes_zh.md
-│   └── notes_en.md
+│   ├── paper.pdf           # Original paper
+│   ├── notes_zh.md         # Chinese notes
+│   ├── notes_en.md         # English notes
+│   └── figures/            # Extracted figures
+│       ├── fig-000.png
+│       ├── fig-001.png
+│       └── ...
 ├── README.md
 └── SKILL.md
 ```
 
+## Figure Selection Guidelines
+
+When including figures in notes:
+1. **Architecture/Overview diagrams** - Include in Insight or Contribution section
+2. **Method illustrations** - Include in relevant Contribution subsection
+3. **Results tables/charts** - Include in Experiments section
+4. **Ablation study figures** - Include in Ablation Studies subsection
+5. Skip decorative or less informative figures
+
 ## Final Output
 
 After completing all steps, display:
-1. Confirmation message
+1. Confirmation message with list of saved files
 2. GitHub folder URL: `https://github.com/0xPabloxx/Paper-Skill/tree/main/paper-YYYY-MM-DD-short-title`

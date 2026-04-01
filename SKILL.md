@@ -1,6 +1,6 @@
 ---
 name: read-paper
-description: Read and analyze arXiv papers. Given an arXiv link or ID, download the paper, generate structured reading notes in both Chinese and English with figures, and push to GitHub. (user)
+description: Read and analyze arXiv papers. Given an arXiv link or ID, download the paper, extract all figures first, generate structured reading notes in both Chinese and English with convincing figures, and push to GitHub. (user)
 ---
 
 # Read Paper Skill
@@ -33,7 +33,7 @@ Extract the arXiv ID from the input. Examples:
 
 Use the arXiv API to get paper metadata (title, authors, last updated date):
 ```bash
-curl -s "http://export.arxiv.org/api/query?id_list=ARXIV_ID"
+curl -s "https://export.arxiv.org/api/query?id_list=ARXIV_ID"
 ```
 
 Extract from the XML response:
@@ -54,48 +54,94 @@ mkdir -p "paper-YYYY-MM-DD-short-title"
 curl -L -o "paper-YYYY-MM-DD-short-title/paper.pdf" "https://arxiv.org/pdf/ARXIV_ID.pdf"
 ```
 
-### Step 4: Extract Figures from PDF
+### Step 4: Extract ALL Figures from PDF (BEFORE Reading)
 
-Extract images/figures from the PDF for use in notes:
+**IMPORTANT**: Extract all figures FIRST, before reading the paper. This allows you to review and select the most convincing figures for the notes.
+
 ```bash
 cd "paper-YYYY-MM-DD-short-title"
-
-# Create figures directory
 mkdir -p figures
-
-# Method 1: Extract embedded images (requires poppler-utils)
-pdfimages -png ../paper.pdf figures/fig
-
-# Method 2: If pdfimages not available, convert pages to images
-# pdftoppm -png -r 150 paper.pdf figures/page
 ```
 
-If `pdfimages` is not installed, inform the user:
+**Method 1: PyMuPDF (Recommended)**
+```python
+python3.8 << 'EOF'
+import fitz
+doc = fitz.open("paper.pdf")
+img_count = 0
+for page_num in range(len(doc)):
+    page = doc[page_num]
+    images = page.get_images(full=True)
+    for img in images:
+        xref = img[0]
+        base_image = doc.extract_image(xref)
+        image_bytes = base_image["image"]
+        image_ext = base_image["ext"]
+        with open(f"figures/fig-{img_count:03d}.{image_ext}", "wb") as f:
+            f.write(image_bytes)
+        print(f"Extracted: fig-{img_count:03d}.{image_ext} (page {page_num + 1})")
+        img_count += 1
+print(f"Total: {img_count} figures extracted")
+EOF
+```
+
+**Method 2: pdfimages (if PyMuPDF unavailable)**
 ```bash
-# Install on Ubuntu/Debian:
-sudo apt install poppler-utils
-
-# Install on macOS:
-brew install poppler
+pdfimages -png paper.pdf figures/fig
 ```
 
-### Step 5: Read the PDF
+**Method 3: pdftoppm (convert pages to images)**
+```bash
+pdftoppm -png -r 150 paper.pdf figures/page
+```
+
+### Step 5: Review Extracted Figures
+
+**CRITICAL STEP**: Before reading the paper, review ALL extracted figures to understand their content:
+
+1. Use the Read tool to view each figure image
+2. Identify what each figure shows:
+   - Architecture/overview diagrams
+   - Method illustrations
+   - Experimental results (tables, charts)
+   - Ablation study figures
+   - Comparison figures
+3. Note the figure filenames and their content for later reference
+4. Skip small icons or decorative images (usually < 5KB)
+
+This step ensures you can select the most convincing and relevant figures when writing notes.
+
+### Step 6: Read the PDF
 
 Use the Read tool to read the PDF file. When reading:
-1. Pay attention to all figures and their captions
-2. Note which figures are most important for understanding the paper
-3. Identify figure numbers (Fig. 1, Figure 2, etc.) and their content
+1. Pay attention to all figures and their captions in the paper
+2. Match figure numbers (Fig. 1, Figure 2, etc.) with the extracted image files
+3. Note which figures are most important for understanding the paper
 
-### Step 6: Generate Notes with Figures
+### Step 7: Generate Notes with Convincing Figures
 
-After reading the paper, generate TWO separate markdown files.
+After reading the paper and reviewing figures, generate TWO separate markdown files.
 
-**IMPORTANT**: Include relevant figures in the notes to enhance understanding:
-- Reference figures using relative paths: `![Figure X](figures/fig-XXX.png)`
-- Add figures where they help explain concepts (architecture diagrams, result tables, ablation charts)
-- Include figure captions in the notes
+**Figure Selection Criteria** - Include figures that:
+- Provide visual evidence for key claims
+- Show architecture or method overview clearly
+- Display experimental results that support conclusions
+- Illustrate comparisons or ablation studies
+- Help readers understand complex concepts
 
-### Step 7: Save Files
+**Figure Placement**:
+- `# Insight` section: Overview/architecture diagram
+- `# Contribution` section: Method illustrations for each contribution
+- `# Experiments` section: Results charts, tables, ablation figures
+- `## Limitation` section: Failure cases or statistical figures if relevant
+
+**Figure Reference Format**:
+```markdown
+![Description](figures/fig-XXX.png)
+*Figure X: Caption explaining what the figure shows and why it's important*
+```
+
+### Step 8: Save Files
 
 Save the following files in the paper folder:
 - `paper.pdf` - Original paper (already downloaded in Step 3)
@@ -103,7 +149,7 @@ Save the following files in the paper folder:
 - `notes_en.md` - English notes with figure references
 - `figures/` - Directory containing extracted figures
 
-### Step 8: Push to GitHub
+### Step 9: Push to GitHub
 
 ```bash
 cd ~/projects/claude-skill-read-paper
@@ -171,6 +217,9 @@ Each markdown file should follow this structure:
 
 ## Limitation
 [What are the failure cases? On what kind of data does it fail?]
+
+![Limitation Figure](figures/fig-XXX.png)
+*Figure X: Statistics or failure cases (if applicable)*
 ```
 
 ---
@@ -178,11 +227,13 @@ Each markdown file should follow this structure:
 ## Output Requirements
 
 1. **Two Separate Files**: Generate `notes_zh.md` (Chinese) and `notes_en.md` (English)
-2. **Include Figures**: Add relevant figures from the paper to improve readability
-3. **PDF Included**: Save original paper as `paper.pdf` in the folder
-4. **Depth**: Be specific and technical, not generic summaries
-5. **Insight vs Contribution**: Clearly distinguish high-level insight from concrete technical contributions
-6. **Ablation Focus**: When discussing experiments, prioritize ablation studies
+2. **Extract Figures First**: Always extract all figures before reading the paper
+3. **Review Figures**: View extracted figures to understand their content before writing notes
+4. **Select Convincing Figures**: Only include figures that add value and support key points
+5. **PDF Included**: Save original paper as `paper.pdf` in the folder
+6. **Depth**: Be specific and technical, not generic summaries
+7. **Insight vs Contribution**: Clearly distinguish high-level insight from concrete technical contributions
+8. **Ablation Focus**: When discussing experiments, prioritize ablation studies
 
 ## Folder Structure
 
@@ -192,10 +243,10 @@ For paper `2301.07041` (Verifiable Fully Homomorphic Encryption, updated 2023-02
 ~/projects/claude-skill-read-paper/
 ├── paper-2023-02-11-verifiable-fhe/
 │   ├── paper.pdf           # Original paper
-│   ├── notes_zh.md         # Chinese notes
-│   ├── notes_en.md         # English notes
-│   └── figures/            # Extracted figures
-│       ├── fig-000.png
+│   ├── notes_zh.md         # Chinese notes (with figures)
+│   ├── notes_en.md         # English notes (with figures)
+│   └── figures/            # ALL extracted figures
+│       ├── fig-000.png     # Review each to understand content
 │       ├── fig-001.png
 │       └── ...
 ├── README.md
@@ -204,15 +255,22 @@ For paper `2301.07041` (Verifiable Fully Homomorphic Encryption, updated 2023-02
 
 ## Figure Selection Guidelines
 
-When including figures in notes:
-1. **Architecture/Overview diagrams** - Include in Insight or Contribution section
-2. **Method illustrations** - Include in relevant Contribution subsection
-3. **Results tables/charts** - Include in Experiments section
-4. **Ablation study figures** - Include in Ablation Studies subsection
-5. Skip decorative or less informative figures
+When reviewing extracted figures, categorize them:
+
+| Category | Where to Use | Priority |
+|----------|--------------|----------|
+| Architecture/Overview | Insight section | High |
+| Method diagrams | Contribution section | High |
+| Results tables/charts | Experiments section | High |
+| Ablation figures | Ablation subsection | High |
+| Comparison charts | Experiments section | Medium |
+| Statistics/distributions | Limitation section | Medium |
+| Small icons (< 5KB) | Skip | Low |
+| Decorative images | Skip | Low |
 
 ## Final Output
 
 After completing all steps, display:
-1. Confirmation message with list of saved files
-2. GitHub folder URL: `https://github.com/0xPabloxx/Paper-Skill/tree/main/paper-YYYY-MM-DD-short-title`
+1. List of extracted figures with brief descriptions
+2. Confirmation message with list of saved files
+3. GitHub folder URL: `https://github.com/0xPabloxx/Paper-Skill/tree/main/paper-YYYY-MM-DD-short-title`

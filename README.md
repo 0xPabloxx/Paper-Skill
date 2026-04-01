@@ -1,14 +1,26 @@
 # Read Paper Skill for Claude Code
 
-A Claude Code skill that reads arXiv papers and generates structured reading notes in both Chinese and English, with figures extracted from the paper, then automatically pushes to GitHub.
+A Claude Code skill that reads arXiv papers and generates structured reading notes in both Chinese and English, with convincing figures extracted from the paper, then automatically pushes to GitHub.
 
 ## Features
 
 - Accepts arXiv ID or URL in multiple formats
 - Automatically downloads paper PDF and saves to repo
-- **Extracts figures** from PDF and embeds in notes
+- **Extracts ALL figures first** before reading paper
+- **Reviews figures** to select the most convincing ones
 - Generates structured notes in **both Chinese and English**
+- **Embeds relevant figures** in notes to improve readability
 - Auto-saves to GitHub with organized folder structure
+
+## Workflow
+
+1. Download PDF from arXiv
+2. **Extract all figures** from PDF (using PyMuPDF)
+3. **Review extracted figures** to understand their content
+4. Read the paper
+5. **Select convincing figures** for each section of notes
+6. Generate bilingual notes with embedded figures
+7. Push to GitHub
 
 ## Installation
 
@@ -22,7 +34,13 @@ cp Paper-Skill/SKILL.md ~/.claude/skills/read-paper/
 cp Paper-Skill/README.md ~/.claude/skills/read-paper/
 ```
 
-### Optional: Install PDF tools for figure extraction
+### Recommended: Install PyMuPDF for figure extraction
+
+```bash
+pip install pymupdf
+```
+
+### Alternative: Install poppler-utils
 
 ```bash
 # Ubuntu/Debian
@@ -55,8 +73,8 @@ Paper-Skill/
 │   ├── paper.pdf          # Original paper
 │   ├── notes_zh.md        # Chinese notes (with figures)
 │   ├── notes_en.md        # English notes (with figures)
-│   └── figures/           # Extracted figures
-│       ├── fig-000.png
+│   └── figures/           # ALL extracted figures
+│       ├── fig-000.png    # Reviewed and categorized
 │       ├── fig-001.png
 │       └── ...
 ├── paper-2024-01-15-another-paper/
@@ -73,25 +91,31 @@ Each note includes:
 - **Question**: Research question addressed
 - **Task**: Specific task being solved
 - **Challenge**: Technical challenges of previous methods
-- **Insight**: Core high-level idea + overview figure
-- **Contribution**: Technical contributions with method figures
-- **Experiments**: Ablation studies with result figures/tables
-- **Limitation**: Failure cases
+- **Insight**: Core high-level idea + **overview figure**
+- **Contribution**: Technical contributions + **method figures**
+- **Experiments**: Ablation studies + **result figures/tables**
+- **Limitation**: Failure cases + **statistics figures**
 
-## Figure Embedding
+## Figure Selection
 
-Notes automatically include relevant figures:
-- Architecture diagrams in the Insight section
-- Method illustrations in Contribution sections
-- Result tables/charts in Experiments section
-- Ablation study figures where applicable
+Figures are selected based on their value:
+
+| Category | Where Used | Priority |
+|----------|------------|----------|
+| Architecture/Overview | Insight | High |
+| Method diagrams | Contribution | High |
+| Results charts/tables | Experiments | High |
+| Ablation figures | Experiments | High |
+| Comparison charts | Experiments | Medium |
+| Statistics | Limitation | Medium |
+| Small icons (< 5KB) | Skipped | - |
 
 ## Requirements
 
 - Claude Code CLI
 - Internet connection (for arXiv access)
 - Git configured with push access to your fork
-- (Optional) `poppler-utils` for figure extraction
+- PyMuPDF (`pip install pymupdf`) or `poppler-utils` for figure extraction
 
 ## License
 

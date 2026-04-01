@@ -42,6 +42,9 @@ By constructing a fixed, human-verified document corpus (containing supporting d
    - **Approach**: Stage 1 uses o3 model to search for webpages supporting the answer and extract clue-URL-evidence triples. Stage 2 involves human annotators verifying document support for each clue and marking gold documents containing the final answer.
    - **Technical Advantage**: Combines automation with human verification for both efficiency and reliability; 14 annotators invested 400+ hours.
 
+![Human Annotation Interface](figures/fig-006.png)
+*Figure: Human annotation interface where annotators verify document support for each clue and mark gold documents containing the final answer.*
+
 3. **Hard Negative Mining Method**
    - **Approach**: Used GPT-4o to decompose complex questions into an average of 7 sub-queries. Each sub-query retrieves up to 100 search results via Google Search API. These pages are crawled and processed as hard negatives.
    - **Technical Advantage**: Keeps corpus size manageable (~100K documents) while ensuring the retrieval task remains challenging.
@@ -55,6 +58,9 @@ By constructing a fixed, human-verified document corpus (containing supporting d
 ## Core Contribution Impact (Ablation Studies)
 
 ### Retriever Impact on End-to-End Accuracy
+
+![Main Experimental Results](figures/fig-000.png)
+*Figure: Accuracy vs. Number of Search Calls for different LLMs using BM25 (red squares) vs. Qwen3-Embed-8B (blue circles) retrievers. Stronger retrievers (blue) consistently improve accuracy across all models.*
 
 | LLM | BM25 Accuracy | Qwen3-Embed-8B Accuracy | Improvement |
 |-----|---------------|------------------------|-------------|
@@ -85,6 +91,9 @@ Expanding corpus from 100K to ~10M documents (adding Fineweb-edu):
 - **Conclusion**: 100K corpus is sufficient for effective evaluation
 
 ## Limitation
+
+![Corpus Statistics](figures/fig-005.png)
+*Figure: Left shows document length distribution (median 2336 tokens). Right shows tokens needed to include the answer. 512 token truncation covers 86.5% of query answers.*
 
 1. **Insufficient Tool-Use Capability in Open-Source Models**: Qwen3-32B and SearchR1-32B average fewer than 2 search calls, far below closed-source models' 20+ calls
 

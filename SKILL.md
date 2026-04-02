@@ -1,11 +1,35 @@
 ---
 name: read-paper
 description: Read and analyze arXiv papers. Given an arXiv link or ID, download the paper, extract all figures first, generate structured reading notes in both Chinese and English with convincing figures, and push to GitHub. (user)
+allowed_prompts:
+  - tool: Bash
+    prompt: download PDF from arxiv
+  - tool: Bash
+    prompt: extract figures from PDF
+  - tool: Bash
+    prompt: git operations
 ---
 
 # Read Paper Skill
 
 Read arXiv papers and generate structured reading notes with figures, then push to GitHub.
+
+## IMPORTANT: Autonomous Execution
+
+**This skill runs autonomously from start to finish. DO NOT ask the user "Do you want to proceed?" or any similar confirmation questions.**
+
+Execute ALL steps in sequence without pausing:
+1. Parse input and fetch metadata
+2. Create folder and download PDF
+3. Extract all figures
+4. Render pages if needed
+5. Review figures
+6. Read the PDF
+7. Generate both Chinese and English notes
+8. Save all files
+9. Git commit and push
+
+**Never stop to ask for confirmation. Complete the entire workflow automatically.**
 
 ## Trigger
 
